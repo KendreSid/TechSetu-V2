@@ -1,0 +1,38 @@
+# Decap CMS settings: what editors can edit and how publishing works.
+# Edits become Git commits; the host rebuilds the site after each publish.
+
+backend:
+  name: github
+  repo: YOUR-GITHUB-USER/techsetu-v2        # TODO: replace
+  branch: main
+  base_url: https://YOUR-OAUTH-PROXY.example # TODO: login helper (Cloudflare Worker), see docs
+
+# draft -> in review -> ready. Each article becomes a pull request that an admin approves.
+publish_mode: editorial_workflow
+
+media_folder: public/images/uploads
+public_folder: /images/uploads
+
+# One folder per language: src/content/articles/hi/, mr/, en/
+i18n:
+  structure: multiple_folders
+  locales: [hi, mr, en]
+  default_locale: hi
+
+collections:
+  - name: articles
+    label: Articles
+    folder: src/content/articles
+    create: true
+    extension: md
+    format: frontmatter
+    slug: "{{fields.urlName}}"   # same file name in every language = same article
+    i18n: true
+    fields:
+      - { label: URL name (English, no spaces), name: urlName, widget: string, i18n: duplicate }
+      - { label: Title, name: title, widget: string, i18n: true }
+      - { label: Description, name: description, widget: text, i18n: true }
+      - { label: Date, name: date, widget: datetime, i18n: duplicate }
+      - { label: Translation status, name: translationStatus, widget: select, options: [original, machine_draft, reviewed], default: original, i18n: true }
+      - { label: Draft (hide from site), name: draft, widget: boolean, default: false, i18n: duplicate }
+      - { label: Body, name: body, widget: markdown, i18n: true }

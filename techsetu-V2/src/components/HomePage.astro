@@ -1,0 +1,149 @@
+---
+/**
+ * The home page body. One component serves all three languages;
+ * the language comes from the address (see getLangFromUrl).
+ */
+import { getCollection } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import BridgeScene from './BridgeScene.astro';
+import SocialIcons from './SocialIcons.astro';
+import VideoLightbox from './VideoLightbox.astro';
+import { getLatestVideos } from '../lib/youtube';
+import { config } from '../config';
+import { getLangFromUrl, useTranslations, localizedPath } from '../i18n/utils';
+
+const lang = getLangFromUrl(Astro.url);
+const t = useTranslations(lang);
+
+// Runs once at build time (see youtube.ts). Three cards are shown; if the channel
+// has fewer videos, "coming soon" cards fill the gap so the layout keeps its shape.
+const videos = await getLatestVideos(3);
+const placeholders = Math.max(0, 3 - videos.length);
+
+// Articles of this language only, hidden drafts removed, newest first.
+const articles = (
+  await getCollection('articles', ({ id, data }) => id.startsWith(`${lang}/`) && !data.draft)
+).sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
+
+/** "hi/chatgpt-explained" becomes "chatgpt-explained". */
+const nameOf = (id: string) => id.split('/')[1];
+
+// Topic strip and sidebar list share this data: icon, background colour, text keys.
+const categories = [
+  { icon: '🤖', color: '#E4E0FF', title: 'cat.ai.title', sub: 'cat.ai.sub' },
+  { icon: '📱', color: '#D6EBFF', title: 'cat.phone.title', sub: 'cat.phone.sub' },
+  { icon: '🌐', color: '#D4F5E3', title: 'cat.net.title', sub: 'cat.net.sub' },
+  { icon: '💻', color: '#D2F3FF', title: 'cat.pc.title', sub: 'cat.pc.sub' },
+  { icon: '💡', color: '#FFF0CC', title: 'cat.facts.title', sub: 'cat.facts.sub' },
+] as const;
+---
+<BaseLayout>
+  <section class="hero">
+    <div class="wrap">
+      <div>
+        <p class="hi">{t('hero.welcome')}</p>
+        <h1>Technology, <em>{t('hero.title2')}</em></h1>
+        <p class="lead">{t('hero.lead')}</p>
+        <div class="acts">
+          <a class="btn blue" href={config.channelUrl} target="_blank" rel="noopener"><span class="play"></span>{t('hero.watch')}</a>
+          <a class="btn ghost" href="#articles">{t('hero.read')}</a>
+        </div>
+      </div>
+      <BridgeScene />
+    </div>
+  </section>
+
+  <div class="cats" id="topics" role="list">
+    {categories.map((c) => (
+      <div class="cat" role="listitem" style={`--c:${c.color}`}>
+        <i translate="no" aria-hidden="true">{c.icon}</i>
+        <span><b>{t(c.title)}</b><small>{t(c.sub)}</small></span>
+      </div>
+    ))}
+  </div>
+
+  <div class="wrap grid">
+    <div>
+      <section class="box" id="videos">
+        <div class="head">
+          <h2><span class="yt"></span>{t('videos.title')}</h2>
+          <a href={config.channelUrl} target="_blank" rel="noopener">{t('videos.viewAll')}</a>
+        </div>
+        <div class="cards">
+          {videos.map((video) => (
+            <a class="card" href={`https://youtu.be/${video.id}`} data-vid={video.id} target="_blank" rel="noopener">
+              <div class="th" style="--g:linear-gradient(135deg,#1F5BFF,#0FB5A0)">
+                <img class="yimg" src={`https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`} alt="" loading="lazy" onerror="this.remove()" />
+                <span class="pl"></span>
+              </div>
+              <h3>{video.title}</h3>
+              <div class="meta">{new Date(video.publishedAt).toLocaleDateString(lang)}</div>
+            </a>
+          ))}
+          {Array.from({ length: placeholders }).map(() => (
+            <div class="card">
+              <div class="th" style="--g:linear-gradient(135deg,#333A5C,#6A7AB8)">▶</div>
+              <h3>{t('videos.soon')}</h3>
+              <div class="meta">{t('videos.soonSub')}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section class="box" id="articles">
+        <div class="head"><h2><span class="doc"></span>{t('articles.title')}</h2></div>
+        {articles.length === 0 ? (
+          <p class="meta">{t('articles.empty')}</p>
+        ) : (
+          <div class="cards art">
+            {articles.map((article) => (
+              <a class="card" href={localizedPath(`/articles/${nameOf(article.id)}/`, lang)}>
+                <div class="th" style="--g:linear-gradient(135deg,#5B2BD6,#FF5CA8)">📝</div>
+                <h3>{article.data.title}</h3>
+                <div class="meta">{article.data.description}</div>
+              </a>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section class="box" id="about">
+        <div class="head"><h2>{t('about.title')}</h2></div>
+        <p style="margin:0 0 10px;max-width:42em">{t('about.body')}</p>
+      </section>
+    </div>
+
+    <aside class="side">
+      <div class="box">
+        <div class="ch">
+          <img src="/images/logo-256.png" alt="" width="64" height="64" />
+          <div><b>TechSetu</b><small>@tech_setu</small></div>
+        </div>
+        <p>{t('side.channelText')}</p>
+        <a class="btn red" href={config.channelUrl} target="_blank" rel="noopener"><span class="play"></span>{t('side.subscribe')}</a>
+      </div>
+      <div class="box list">
+        <h3>{t('side.popular')}</h3>
+        {categories.map((c) => (
+          <a href="#topics"><i translate="no" aria-hidden="true">{c.icon}</i><span>{t(c.title)}</span></a>
+        ))}
+      </div>
+      <div class="box">
+        <h3 style="margin-bottom:12px">{t('side.follow')}</h3>
+        <SocialIcons />
+        <p class="meta" style="margin:12px 0 0">{t('side.followText')}</p>
+      </div>
+    </aside>
+  </div>
+
+  <section class="band">
+    <div class="wrap">
+      <img class="bandlogo" src="/images/logo-256.png" alt="" width="104" height="104" />
+      <h2>{t('band.title')}</h2>
+      <p>{t('band.text')}</p>
+      <a class="btn saf" href={config.channelUrl} target="_blank" rel="noopener"><span class="play"></span>{t('side.subscribe')}</a>
+    </div>
+  </section>
+
+  <VideoLightbox />
+</BaseLayout>

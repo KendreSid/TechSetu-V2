@@ -1,0 +1,16 @@
+---
+/**
+ * Article pages for the default language (Hindi), at /articles/<name>/.
+ * getStaticPaths tells Astro which pages to build: one per published article.
+ */
+import { getCollection } from 'astro:content';
+import ArticlePage from '../../components/ArticlePage.astro';
+
+export async function getStaticPaths() {
+  const entries = await getCollection('articles', ({ id, data }) => id.startsWith('hi/') && !data.draft);
+  return entries.map((entry) => ({ params: { slug: entry.id.split('/')[1] }, props: { entry } }));
+}
+
+const { entry } = Astro.props;
+---
+<ArticlePage entry={entry} />

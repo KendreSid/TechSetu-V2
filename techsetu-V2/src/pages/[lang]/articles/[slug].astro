@@ -1,0 +1,22 @@
+---
+/**
+ * Article pages for Marathi and English, at /mr/articles/<name>/ and /en/articles/<name>/.
+ */
+import { getCollection } from 'astro:content';
+import ArticlePage from '../../../components/ArticlePage.astro';
+
+export async function getStaticPaths() {
+  const langs = ['mr', 'en'];
+  const paths = [];
+  for (const lang of langs) {
+    const entries = await getCollection('articles', ({ id, data }) => id.startsWith(`${lang}/`) && !data.draft);
+    for (const entry of entries) {
+      paths.push({ params: { lang, slug: entry.id.split('/')[1] }, props: { entry } });
+    }
+  }
+  return paths;
+}
+
+const { entry } = Astro.props;
+---
+<ArticlePage entry={entry} />

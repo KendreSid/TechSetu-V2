@@ -1,0 +1,81 @@
+---
+/**
+ * Full-screen video player. Any element with a data-vid attribute (a YouTube video id)
+ * opens it. If the host blocks embedded players, a "watch on YouTube" fallback is shown.
+ * Without JavaScript the video cards still work as normal links to YouTube.
+ */
+import { getLangFromUrl, useTranslations } from '../i18n/utils';
+
+const t = useTranslations(getLangFromUrl(Astro.url));
+---
+<div class="lb" id="lb" hidden role="dialog" aria-modal="true" aria-label="TechSetu">
+  <div class="lbin">
+    <button class="lbx" id="lbx" type="button" aria-label="Close">&times;</button>
+    <div class="lbp" id="lbp"></div>
+    <p class="lbm">
+      <span id="lbs" hidden>{t('player.fail')}</span>
+      <a id="lbl" href="https://youtube.com" target="_blank" rel="noopener">{t('player.watch')}</a>
+    </p>
+  </div>
+</div>
+
+<script>
+  const lightbox = document.getElementById('lb');
+  const stage = document.getElementById('lbp');
+  const failMessage = document.getElementById('lbs');
+  const watchLink = document.getElementById('lbl') as HTMLAnchorElement | null;
+  const closeButton = document.getElementById('lbx');
+
+  if (lightbox && stage && failMessage && watchLink && closeButton) {
+    /** Closes the player and stops the video (removing the frame stops the sound). */
+    const closePlayer = () => {
+      lightbox.hidden = true;
+      stage.innerHTML = '';
+      stage.style.display = '';
+      failMessage.hidden = true;
+      document.body.style.overflow = '';
+    };
+
+    /** Opens the player for one YouTube video id. */
+    const openPlayer = (videoId: string) => {
+      failMessage.hidden = true;
+      stage.style.display = '';
+      stage.innerHTML = '';
+      watchLink.href = `https://youtu.be/${videoId}`;
+      const frame = document.createElement('iframe');
+      frame.src = `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0&playsinline=1`;
+      frame.title = 'TechSetu';
+      frame.allow = 'autoplay; encrypted-media; picture-in-picture; fullscreen';
+      frame.setAttribute('allowfullscreen', '');
+      frame.referrerPolicy = 'strict-origin-when-cross-origin';
+      stage.appendChild(frame);
+      lightbox.hidden = false;
+      document.body.style.overflow = 'hidden';
+    };
+
+    /** Shown when the host does not allow embedded players. */
+    const showFallback = () => {
+      stage.innerHTML = '';
+      stage.style.display = 'none';
+      failMessage.hidden = false;
+    };
+
+    document.querySelectorAll<HTMLElement>('[data-vid]').forEach((card) => {
+      card.addEventListener('click', (event) => {
+        event.preventDefault();
+        openPlayer(card.dataset.vid ?? '');
+      });
+    });
+    closeButton.addEventListener('click', closePlayer);
+    lightbox.addEventListener('click', (event) => {
+      if (event.target === lightbox) closePlayer();
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && !lightbox.hidden) closePlayer();
+    });
+    // The browser reports blocked embeds through this event (content security policy).
+    document.addEventListener('securitypolicyviolation', (event) => {
+      if (!lightbox.hidden && /frame|child/.test(event.effectiveDirective)) showFallback();
+    });
+  }
+</script>

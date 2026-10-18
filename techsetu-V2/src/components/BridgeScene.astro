@@ -1,0 +1,102 @@
+---
+/**
+ * The hero picture: technology on the left, the visitor on the right, and a bridge
+ * that draws itself between them. Light travels across the bridge to the phone.
+ * The vertical hanger lines are calculated here, at build time, so no browser script is needed.
+ * Colours and animation timing live in styles/global.css (classes tower, cable, deck, pulse...).
+ */
+import { getLangFromUrl, useTranslations } from '../i18n/utils';
+
+const t = useTranslations(getLangFromUrl(Astro.url));
+
+const DECK_Y = 440;
+// The main cable is a curve: start, control point, end.
+const start = [200, 270];
+const control = [320, 450];
+const end = [440, 270];
+
+/** Point on the cable curve at position t (0 = left tower, 1 = right tower); axis 0 = x, 1 = y. */
+function onCable(position: number, axis: 0 | 1): number {
+  const u = 1 - position;
+  return u * u * start[axis] + 2 * u * position * control[axis] + position * position * end[axis];
+}
+
+/** 13 hangers spread along the cable; each appears a little after the previous one. */
+const hangers = Array.from({ length: 13 }, (_, i) => {
+  const position = (i + 1) / 14;
+  return {
+    x: onCable(position, 0).toFixed(1),
+    y: onCable(position, 1).toFixed(1),
+    delay: (1.4 + i * 0.045).toFixed(3),
+  };
+});
+---
+<svg class="bridge scene" viewBox="0 150 640 370" role="img" aria-label={t('scene.label')}>
+  <defs>
+    <linearGradient id="scr" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0E3A9E" /><stop offset="1" stop-color="#050F28" /></linearGradient>
+    <radialGradient id="glow"><stop offset="0" stop-color="#27D3FF" stop-opacity=".5" /><stop offset="1" stop-color="#27D3FF" stop-opacity="0" /></radialGradient>
+    <linearGradient id="hood" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3A72FF" /><stop offset="1" stop-color="#1A3BB8" /></linearGradient>
+    <clipPath id="lc" clipPathUnits="objectBoundingBox"><circle cx=".5" cy=".5" r=".5" /></clipPath>
+  </defs>
+
+  <circle class="pop" cx="320" cy="300" r="250" fill="url(#glow)" />
+  <rect class="river" x="0" y="440" width="640" height="80" />
+  <rect class="river2" x="0" y="440" width="640" height="10" />
+  <rect class="bank" x="0" y="440" width="126" height="80" />
+  <rect class="bank" x="514" y="440" width="126" height="80" />
+
+  <!-- Left bank: the laptop (technology) -->
+  <g class="pop" style="--d:.1s">
+    <rect x="14" y="368" width="96" height="60" rx="8" fill="#07142F" stroke="#3A7BFF" stroke-width="3" />
+    <rect x="21" y="375" width="82" height="46" rx="4" fill="url(#scr)" />
+    <g fill="#27D3FF"><rect x="28" y="383" width="34" height="5" rx="2.5" /><rect x="36" y="394" width="44" height="5" rx="2.5" fill="#5B8CFF" /><rect x="28" y="405" width="28" height="5" rx="2.5" fill="#8FB8FF" /></g>
+    <circle cx="86" cy="397" r="11" fill="none" stroke="#27D3FF" stroke-width="2.5" />
+    <path d="M4 428h116l8 12H-4z" fill="#1C3F8F" />
+  </g>
+
+  <!-- Bridge: towers, hangers, cable, deck -->
+  <rect class="tower" x="191" y="270" width="18" height="250" rx="4" />
+  <rect class="tower r" x="431" y="270" width="18" height="250" rx="4" />
+  <g>
+    {hangers.map((h) => <line class="hanger" x1={h.x} x2={h.x} y1={h.y} y2={DECK_Y} style={`animation-delay:${h.delay}s`} />)}
+  </g>
+  <path class="cable" pathLength="1" d="M126 440Q160 380 200 270Q320 450 440 270Q480 380 514 440" />
+  <path class="deck" pathLength="1" d="M110 440H530" />
+
+  <!-- Right bank: the visitor, seen from behind, looking at the channel on a phone -->
+  <g class="pop" style="--d:.1s">
+    <rect x="566" y="426" width="72" height="8" rx="3" fill="#0E2A6E" /><rect x="572" y="434" width="6" height="6" fill="#0E2A6E" /><rect x="626" y="434" width="6" height="6" fill="#0E2A6E" />
+    <path d="M572 428C570 408 576 396 590 391L614 391C628 396 634 408 632 428Z" fill="url(#hood)" />
+    <path d="M602 396V426" stroke="#0F2D96" stroke-width="2" opacity=".55" />
+    <path d="M594 372h16v18q-8 5-16 0z" fill="#C98B5E" />
+    <path d="M582 394q20 14 40 0q-5-11-20-11t-20 11z" fill="#1E3FB5" />
+    <ellipse cx="582.5" cy="368" rx="3" ry="5" fill="#D6986C" /><ellipse cx="621.5" cy="368" rx="3" ry="5" fill="#D6986C" />
+    <path d="M582 366c0-16 8-25 20-25s20 9 20 25c0 11-6 19-20 19s-20-8-20-19z" fill="#1A1A2E" />
+    <path d="M591 351q11-8 22 0" stroke="#fff" stroke-opacity=".2" stroke-width="3" fill="none" stroke-linecap="round" />
+    <rect x="528" y="430" width="42" height="6" rx="3" fill="#1C3F8F" /><rect x="546" y="424" width="6" height="8" fill="#1C3F8F" />
+    <g transform="rotate(-8 549 405)">
+      <rect x="534" y="380" width="30" height="50" rx="6" fill="#0A1F52" stroke="#27D3FF" stroke-width="2" />
+      <rect class="ping" x="538" y="386" width="22" height="38" rx="3" fill="#27D3FF" />
+      <image href="/images/logo-256.png" x="540" y="389" width="18" height="18" clip-path="url(#lc)" />
+      <rect x="542" y="411" width="14" height="9" rx="3" fill="#E8112D" /><path d="M547 412.5l5 3-5 3z" fill="#fff" />
+    </g>
+  </g>
+
+  <!-- Signal lines and the logo hub -->
+  <path class="arc" d="M64 262Q90 195 272 215" />
+  <path class="arc" d="M368 215Q548 195 602 262" />
+  <g class="pop" style="--d:2.4s">
+    <circle cx="320" cy="215" r="48" fill="#0A2A7A" stroke="#27D3FF" stroke-width="3" />
+    <image href="/images/logo-256.png" x="274" y="169" width="92" height="92" clip-path="url(#lc)" />
+  </g>
+
+  <!-- Labels -->
+  <g class="pop" style="--d:2.6s">
+    <rect class="pill" x="2" y="262" width="124" height="34" rx="17" /><text class="pt" x="64" y="286" font-size="19">{t('scene.tech')}</text>
+    <rect class="pill" x="568" y="262" width="68" height="34" rx="17" /><text class="pt" x="602" y="286" font-size="19">{t('scene.you')}</text>
+  </g>
+
+  <!-- Light that travels from the laptop to the phone -->
+  <circle class="pulse" cx="130" cy="440" r="7" />
+  <circle class="pulse" style="animation-delay:3.4s" cx="130" cy="440" r="4" />
+</svg>

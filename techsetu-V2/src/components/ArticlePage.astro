@@ -1,0 +1,26 @@
+---
+/**
+ * One article page. Receives the article (already loaded by the route file)
+ * and turns its Markdown body into HTML with render().
+ */
+import { render, type CollectionEntry } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { getLangFromUrl, useTranslations } from '../i18n/utils';
+
+interface Props {
+  entry: CollectionEntry<'articles'>;
+}
+
+const { entry } = Astro.props;
+const { Content } = await render(entry);
+const lang = getLangFromUrl(Astro.url);
+const t = useTranslations(lang);
+---
+<BaseLayout title={`${entry.data.title} - TechSetu`} description={entry.data.description}>
+  <article class="article">
+    <h1>{entry.data.title}</h1>
+    <p class="meta">{entry.data.date.toLocaleDateString(lang)}</p>
+    {entry.data.translationStatus === 'machine_draft' && <p class="notice">{t('article.machineNotice')}</p>}
+    <div class="prose"><Content /></div>
+  </article>
+</BaseLayout>
