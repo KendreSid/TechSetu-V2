@@ -1,0 +1,103 @@
+---
+/**
+ * Small floating video player in the bottom corner.
+ * Any element with a data-vid attribute (a YouTube video id) plays here.
+ * The page stays scrollable and clickable while the video plays, so visitors can keep browsing.
+ * Clicking another video replaces the current one (the first stops automatically).
+ * Without JavaScript the video cards still work as normal links to YouTube.
+ */
+import T from './T.astro';
+---
+<div class="mini" id="mini" hidden role="region" aria-label="TechSetu video">
+  <div class="mini-bar">
+    <span class="mini-title" id="mini-title">TechSetu</span>
+    <button class="mini-x" id="mini-x" type="button" aria-label="Close">&times;</button>
+  </div>
+  <div class="mini-frame" id="mini-frame"></div>
+  <p class="mini-msg" id="mini-msg" hidden>
+    <span><T k="player.fail" /></span>
+    <a id="mini-watch" href="https://youtube.com" target="_blank" rel="noopener"><T k="player.watch" /></a>
+  </p>
+</div>
+
+<script>
+  /** The player elements of the page that is currently shown (they are replaced on every page change). */
+  function parts() {
+    return {
+      mini: document.getElementById('mini'),
+      frame: document.getElementById('mini-frame'),
+      title: document.getElementById('mini-title'),
+      message: document.getElementById('mini-msg'),
+      watch: document.getElementById('mini-watch') as HTMLAnchorElement | null,
+    };
+  }
+
+  /** Id of the video that is playing now ('' when none). */
+  let currentId = '';
+
+  /** Closes the player and stops the video (removing the frame stops the sound). */
+  function closePlayer() {
+    const { mini, frame, message } = parts();
+    if (!mini || !frame || !message) return;
+    mini.hidden = true;
+    frame.innerHTML = '';
+    frame.style.display = '';
+    message.hidden = true;
+    currentId = '';
+  }
+
+  /**
+   * Plays one video. If another video is already playing, its frame is removed first,
+   * so only one video ever plays. Clicking the video that is already playing does nothing.
+   */
+  function openPlayer(videoId: string, videoTitle: string) {
+    const { mini, frame, title, message, watch } = parts();
+    if (!mini || !frame || !title || !message || !watch) return;
+    if (!mini.hidden && currentId === videoId) return;
+
+    currentId = videoId;
+    title.textContent = videoTitle || 'TechSetu';
+    watch.href = `https://youtu.be/${videoId}`;
+    message.hidden = true;
+    frame.style.display = '';
+    frame.innerHTML = '';
+
+    const embed = document.createElement('iframe');
+    embed.src = `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0&playsinline=1`;
+    embed.title = videoTitle || 'TechSetu';
+    embed.allow = 'autoplay; encrypted-media; picture-in-picture; fullscreen';
+    embed.setAttribute('allowfullscreen', '');
+    embed.referrerPolicy = 'strict-origin-when-cross-origin';
+    frame.appendChild(embed);
+    mini.hidden = false;
+  }
+
+  /** Shown when the host does not allow embedded players. */
+  function showFallback() {
+    const { frame, message } = parts();
+    if (!frame || !message) return;
+    frame.innerHTML = '';
+    frame.style.display = 'none';
+    message.hidden = false;
+  }
+
+  // Listeners on the whole document.
+  document.addEventListener('keydown', (event) => {
+    const { mini } = parts();
+    if (event.key === 'Escape' && mini && !mini.hidden) closePlayer();
+  });
+  // The browser reports blocked embeds through this event (content security policy).
+  document.addEventListener('securitypolicyviolation', (event) => {
+    const { mini } = parts();
+    if (mini && !mini.hidden && /frame|child/.test(event.effectiveDirective)) showFallback();
+  });
+
+  // Connects the buttons of this page (the script runs once the page is ready).
+  document.querySelectorAll<HTMLElement>('[data-vid]').forEach((card) => {
+    card.addEventListener('click', (event) => {
+      event.preventDefault();
+      openPlayer(card.dataset.vid ?? '', card.querySelector('h3')?.textContent?.trim() ?? '');
+    });
+  });
+  document.getElementById('mini-x')?.addEventListener('click', closePlayer);
+</script>

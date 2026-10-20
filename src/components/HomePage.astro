@@ -1,29 +1,38 @@
 ---
 /**
- * The home page body. One component serves all three languages;
- * the language comes from the address (see getLangFromUrl).
+ * The home page body. One component serves all three addresses (/, /mr/, /en/);
+ * the language comes from the address (see getLangFromUrl) and can then be switched in place.
  */
 import { getCollection } from 'astro:content';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import BridgeScene from './BridgeScene.astro';
 import SocialIcons from './SocialIcons.astro';
-import VideoLightbox from './VideoLightbox.astro';
+import MiniPlayer from './MiniPlayer.astro';
+import T from './T.astro';
 import { getLatestVideos } from '../lib/youtube';
 import { config } from '../config';
-import { getLangFromUrl, useTranslations, localizedPath } from '../i18n/utils';
+import { ui, languages, type Lang } from '../i18n/ui';
+import { getLangFromUrl, localizedPath } from '../i18n/utils';
 
 const lang = getLangFromUrl(Astro.url);
-const t = useTranslations(lang);
 
 // Runs once at build time (see youtube.ts). Three cards are shown; if the channel
 // has fewer videos, "coming soon" cards fill the gap so the layout keeps its shape.
 const videos = await getLatestVideos(3);
 const placeholders = Math.max(0, 3 - videos.length);
 
-// Articles of this language only, hidden drafts removed, newest first.
-const articles = (
-  await getCollection('articles', ({ id, data }) => id.startsWith(`${lang}/`) && !data.draft)
-).sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
+// Articles of EVERY language, drafts removed, newest first. All are in the page, but a
+// style rule shows only those of the current language (see [data-lang] in global.css),
+// which is what lets the language switch work without loading anything.
+const langs = Object.keys(languages) as Lang[];
+const articleGroups = await Promise.all(
+  langs.map(async (code) => {
+    const items = (
+      await getCollection('articles', ({ id, data }) => id.startsWith(`${code}/`) && !data.draft)
+    ).sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
+    return { code, items };
+  }),
+);
 
 /** "hi/chatgpt-explained" becomes "chatgpt-explained". */
 const nameOf = (id: string) => id.split('/')[1];
@@ -37,16 +46,16 @@ const categories = [
   { icon: '💡', color: '#FFF0CC', title: 'cat.facts.title', sub: 'cat.facts.sub' },
 ] as const;
 ---
-<BaseLayout>
+<BaseLayout inplace>
   <section class="hero">
     <div class="wrap">
       <div>
-        <p class="hi">{t('hero.welcome')}</p>
-        <h1>Technology, <em>{t('hero.title2')}</em></h1>
-        <p class="lead">{t('hero.lead')}</p>
+        <p class="hi"><T k="hero.welcome" /></p>
+        <h1>Technology, <em><T k="hero.title2" /></em></h1>
+        <p class="lead"><T k="hero.lead" /></p>
         <div class="acts">
-          <a class="btn blue" href={config.channelUrl} target="_blank" rel="noopener"><span class="play"></span>{t('hero.watch')}</a>
-          <a class="btn ghost" href="#articles">{t('hero.read')}</a>
+          <a class="btn blue" href={config.channelUrl} target="_blank" rel="noopener"><span class="play"></span><T k="hero.watch" /></a>
+          <a class="btn ghost" href="#articles"><T k="hero.read" /></a>
         </div>
       </div>
       <BridgeScene />
@@ -57,7 +66,7 @@ const categories = [
     {categories.map((c) => (
       <div class="cat" role="listitem" style={`--c:${c.color}`}>
         <i translate="no" aria-hidden="true">{c.icon}</i>
-        <span><b>{t(c.title)}</b><small>{t(c.sub)}</small></span>
+        <span><b><T k={c.title} /></b><small><T k={c.sub} /></small></span>
       </div>
     ))}
   </div>
@@ -66,8 +75,8 @@ const categories = [
     <div>
       <section class="box" id="videos">
         <div class="head">
-          <h2><span class="yt"></span>{t('videos.title')}</h2>
-          <a href={config.channelUrl} target="_blank" rel="noopener">{t('videos.viewAll')}</a>
+          <h2><span class="yt"></span><T k="videos.title" /></h2>
+          <a href={config.channelUrl} target="_blank" rel="noopener"><T k="videos.viewAll" /></a>
         </div>
         <div class="cards">
           {videos.map((video) => (
@@ -83,33 +92,34 @@ const categories = [
           {Array.from({ length: placeholders }).map(() => (
             <div class="card">
               <div class="th" style="--g:linear-gradient(135deg,#333A5C,#6A7AB8)">▶</div>
-              <h3>{t('videos.soon')}</h3>
-              <div class="meta">{t('videos.soonSub')}</div>
+              <h3><T k="videos.soon" /></h3>
+              <div class="meta"><T k="videos.soonSub" /></div>
             </div>
           ))}
         </div>
       </section>
 
       <section class="box" id="articles">
-        <div class="head"><h2><span class="doc"></span>{t('articles.title')}</h2></div>
-        {articles.length === 0 ? (
-          <p class="meta">{t('articles.empty')}</p>
-        ) : (
-          <div class="cards art">
-            {articles.map((article) => (
-              <a class="card" href={localizedPath(`/articles/${nameOf(article.id)}/`, lang)}>
+        <div class="head"><h2><span class="doc"></span><T k="articles.title" /></h2></div>
+        <div class="cards art">
+          {articleGroups.flatMap(({ code, items }) =>
+            items.map((article) => (
+              <a class="card" data-lang={code} href={localizedPath(`/articles/${nameOf(article.id)}/`, code)}>
                 <div class="th" style="--g:linear-gradient(135deg,#5B2BD6,#FF5CA8)">📝</div>
                 <h3>{article.data.title}</h3>
                 <div class="meta">{article.data.description}</div>
               </a>
-            ))}
-          </div>
-        )}
+            )),
+          )}
+        </div>
+        {articleGroups
+          .filter((group) => group.items.length === 0)
+          .map((group) => <p class="meta" data-lang={group.code}>{ui[group.code]['articles.empty']}</p>)}
       </section>
 
       <section class="box" id="about">
-        <div class="head"><h2>{t('about.title')}</h2></div>
-        <p style="margin:0 0 10px;max-width:42em">{t('about.body')}</p>
+        <div class="head"><h2><T k="about.title" /></h2></div>
+        <p style="margin:0 0 10px;max-width:42em"><T k="about.body" /></p>
       </section>
     </div>
 
@@ -119,19 +129,19 @@ const categories = [
           <img src="/images/logo-256.png" alt="" width="64" height="64" />
           <div><b>TechSetu</b><small>@tech_setu</small></div>
         </div>
-        <p>{t('side.channelText')}</p>
-        <a class="btn red" href={config.channelUrl} target="_blank" rel="noopener"><span class="play"></span>{t('side.subscribe')}</a>
+        <p><T k="side.channelText" /></p>
+        <a class="btn red" href={config.channelUrl} target="_blank" rel="noopener"><span class="play"></span><T k="side.subscribe" /></a>
       </div>
       <div class="box list">
-        <h3>{t('side.popular')}</h3>
+        <h3><T k="side.popular" /></h3>
         {categories.map((c) => (
-          <a href="#topics"><i translate="no" aria-hidden="true">{c.icon}</i><span>{t(c.title)}</span></a>
+          <a href="#topics"><i translate="no" aria-hidden="true">{c.icon}</i><span><T k={c.title} /></span></a>
         ))}
       </div>
       <div class="box">
-        <h3 style="margin-bottom:12px">{t('side.follow')}</h3>
+        <h3 style="margin-bottom:12px"><T k="side.follow" /></h3>
         <SocialIcons />
-        <p class="meta" style="margin:12px 0 0">{t('side.followText')}</p>
+        <p class="meta" style="margin:12px 0 0"><T k="side.followText" /></p>
       </div>
     </aside>
   </div>
@@ -139,11 +149,11 @@ const categories = [
   <section class="band">
     <div class="wrap">
       <img class="bandlogo" src="/images/logo-256.png" alt="" width="104" height="104" />
-      <h2>{t('band.title')}</h2>
-      <p>{t('band.text')}</p>
-      <a class="btn saf" href={config.channelUrl} target="_blank" rel="noopener"><span class="play"></span>{t('side.subscribe')}</a>
+      <h2><T k="band.title" /></h2>
+      <p><T k="band.text" /></p>
+      <a class="btn saf" href={config.channelUrl} target="_blank" rel="noopener"><span class="play"></span><T k="side.subscribe" /></a>
     </div>
   </section>
 
-  <VideoLightbox />
+  <MiniPlayer />
 </BaseLayout>

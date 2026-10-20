@@ -15,6 +15,14 @@ Status: proposed. Date: 18 Oct 2026. Based on: Requirements v1.0.
 5. **Newsletter: provider behind our own adapter.** Start with Brevo; switching later must
    touch one file only (see Stage 4).
 
+6. **Language switch: in place, with one address per language.** Hindi `/`, Marathi `/mr/`, English `/en/`
+   still exist as separate addresses (good for Google and for sharing a link in the right language).
+   On the home page the language buttons do not open another page: every text carries a key (`data-i18n`),
+   the browser swaps the texts, and the address bar is updated. Scroll position, a playing video and the
+   bridge animation are untouched.
+   Cost: the home page HTML also contains the article cards of the other languages (hidden by a style rule),
+   and article pages still open the other address normally.
+
 ## What changed from design v1, and why
 
 | Was | Now | Reason |

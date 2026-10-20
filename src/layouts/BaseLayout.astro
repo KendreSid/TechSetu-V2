@@ -1,0 +1,140 @@
+---
+/**
+ * The frame every page shares: <head> (title, SEO, language links), header, footer.
+ * Pages only provide the middle part through <slot />.
+ * On pages marked `inplace` (the home page) the language buttons change the language
+ * without leaving the page: scroll position, playing video and animations stay as they are.
+ */
+import '../styles/global.css';
+import T from '../components/T.astro';
+import { languages, type Lang } from '../i18n/ui';
+import { getLangFromUrl, useTranslations, localizedPath, stripLang } from '../i18n/utils';
+import { config } from '../config';
+
+interface Props {
+  title?: string;
+  description?: string;
+  /** true = language buttons switch the text in place instead of opening another address */
+  inplace?: boolean;
+}
+
+const lang = getLangFromUrl(Astro.url);
+const t = useTranslations(lang);
+const { title = `TechSetu - ${t('site.tagline')}`, description = t('meta.description'), inplace = false } = Astro.props;
+const home = localizedPath('/', lang);
+
+// The same page in every language. Search engines use these to show the right
+// language to the right visitor (hreflang).
+const basePath = stripLang(Astro.url.pathname);
+const site = Astro.site ?? Astro.url;
+const alternates = (Object.keys(languages) as Lang[]).map((code) => ({
+  code,
+  href: new URL(localizedPath(basePath, code), site).href,
+}));
+---
+<!doctype html>
+<html lang={lang}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <meta name="theme-color" content="#06122E" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <link rel="icon" type="image/png" href="/images/favicon.png" />
+    {alternates.map((alt) => <link rel="alternate" hreflang={alt.code} href={alt.href} />)}
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Hind:wght@400;500;600&display=swap" rel="stylesheet" />
+  </head>
+  <body data-inplace={inplace ? '' : undefined}>
+    <header>
+      <div class="wrap bar">
+        <a class="brand" href={home} data-localize="/" aria-label="TechSetu">
+          <img src="/images/logo-256.png" alt="" width="46" height="46" />
+          <span><b>TechSetu</b><small><T k="site.tagline" /></small></span>
+        </a>
+        <nav aria-label="Main">
+          <a href={home} data-localize="/"><T k="nav.home" /></a>
+          <a href={`${home}#videos`} data-localize="/#videos"><T k="nav.videos" /></a>
+          <a href={`${home}#articles`} data-localize="/#articles"><T k="nav.articles" /></a>
+          <a href={`${home}#topics`} data-localize="/#topics"><T k="nav.topics" /></a>
+          <a href={`${home}#about`} data-localize="/#about"><T k="nav.about" /></a>
+        </nav>
+        <div class="rt">
+          <div class="lang" translate="no" role="group" aria-label="Language">
+            {alternates.map((alt) => (
+              <a href={localizedPath(basePath, alt.code)} hreflang={alt.code} data-lang-link={alt.code} aria-current={alt.code === lang ? 'page' : undefined}>
+                {languages[alt.code]}
+              </a>
+            ))}
+          </div>
+          <a class="btn dark" href={config.channelUrl} target="_blank" rel="noopener" aria-label={t('cta.subscribe')}>
+            <span class="play"></span><span class="bt"><T k="cta.subscribe" /></span>
+          </a>
+        </div>
+      </div>
+    </header>
+    <main>
+      <slot />
+    </main>
+    <footer>
+      <div class="wrap">
+        <a class="brand" href={home} data-localize="/">
+          <img src="/images/logo-256.png" alt="" width="46" height="46" />
+          <span><b>TechSetu</b><small><T k="site.tagline" /></small></span>
+        </a>
+        <nav>
+          <a href={home} data-localize="/"><T k="nav.home" /></a>
+          <a href={`${home}#videos`} data-localize="/#videos"><T k="nav.videos" /></a>
+          <a href={`${home}#articles`} data-localize="/#articles"><T k="nav.articles" /></a>
+          <a href={`${home}#about`} data-localize="/#about"><T k="nav.about" /></a>
+        </nav>
+        <span>&copy; {new Date().getFullYear()} <T k="footer.rights" /></span>
+      </div>
+    </footer>
+  </body>
+</html>
+
+<script>
+  import { ui, defaultLang, type Lang } from '../i18n/ui';
+  import { localizedPath, stripLang } from '../i18n/utils';
+
+  type Key = keyof (typeof ui)[typeof defaultLang];
+
+  /**
+   * Switches the whole page to `lang` without leaving it.
+   * Every text carrying data-i18n gets its translation, links carrying data-localize
+   * get the right address, and the address bar is updated so that refreshing or
+   * sharing the page keeps the chosen language.
+   */
+  function applyLanguage(lang: Lang) {
+    document.querySelectorAll<HTMLElement>('[data-i18n]').forEach((element) => {
+      const key = element.dataset.i18n as Key;
+      element.textContent = ui[lang][key] ?? ui[defaultLang][key];
+    });
+    document.querySelectorAll<HTMLAnchorElement>('[data-localize]').forEach((link) => {
+      link.href = localizedPath(link.dataset.localize ?? '/', lang);
+    });
+    document.querySelectorAll<HTMLElement>('[data-lang-link]').forEach((link) => {
+      if (link.dataset.langLink === lang) link.setAttribute('aria-current', 'page');
+      else link.removeAttribute('aria-current');
+    });
+    document.querySelector('.scene')?.setAttribute('aria-label', ui[lang]['scene.label']);
+    document.documentElement.lang = lang;
+    document.title = `TechSetu - ${ui[lang]['site.tagline']}`;
+    history.replaceState(history.state, '', localizedPath(stripLang(location.pathname), lang) + location.hash);
+  }
+
+  // Only pages marked `inplace` switch in place; other pages (articles) open the other address as usual.
+  if (document.body.hasAttribute('data-inplace')) {
+    document.querySelectorAll<HTMLElement>('[data-lang-link]').forEach((link) => {
+      link.addEventListener('click', (event) => {
+        event.preventDefault();
+        applyLanguage(link.dataset.langLink as Lang);
+      });
+    });
+  }
+</script>

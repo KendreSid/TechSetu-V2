@@ -1,0 +1,18 @@
+---
+/**
+ * A piece of interface text that can be switched to another language in place.
+ * It prints the text in the page's language and tags it with its key (data-i18n),
+ * so the language switch can replace it without leaving the page.
+ * Use <T k="nav.home" /> inside page content; use t('key') in attributes and code.
+ */
+import { getLangFromUrl, useTranslations } from '../i18n/utils';
+import type { ui, defaultLang } from '../i18n/ui';
+
+interface Props {
+  k: keyof (typeof ui)[typeof defaultLang];
+}
+
+const { k } = Astro.props;
+const t = useTranslations(getLangFromUrl(Astro.url));
+---
+<span data-i18n={k}>{t(k)}</span>
