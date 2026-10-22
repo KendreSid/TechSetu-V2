@@ -11,7 +11,7 @@ import MiniPlayer from './MiniPlayer.astro';
 import T from './T.astro';
 import { getLatestVideos } from '../lib/youtube';
 import { config } from '../config';
-import { ui, languages, type Lang } from '../i18n/ui';
+import type { Lang } from '../i18n/ui';
 import { getLangFromUrl, localizedPath } from '../i18n/utils';
 
 const lang = getLangFromUrl(Astro.url);
@@ -21,20 +21,15 @@ const lang = getLangFromUrl(Astro.url);
 const videos = await getLatestVideos(3);
 const placeholders = Math.max(0, 3 - videos.length);
 
-// Articles of EVERY language, drafts removed, newest first. All are in the page, but a
-// style rule shows only those of the current language (see [data-lang] in global.css),
-// which is what lets the language switch work without loading anything.
-const langs = Object.keys(languages) as Lang[];
-const articleGroups = await Promise.all(
-  langs.map(async (code) => {
-    const items = (
-      await getCollection('articles', ({ id, data }) => id.startsWith(`${code}/`) && !data.draft)
-    ).sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
-    return { code, items };
-  }),
+// ALL articles, in every language, drafts removed, newest first. An article stays in the
+// language it was written in and is shown to every visitor, whatever language the site
+// interface is set to. Only the interface text changes with the language buttons.
+const articles = (await getCollection('articles', ({ data }) => !data.draft)).sort(
+  (a, b) => b.data.date.valueOf() - a.data.date.valueOf(),
 );
 
-/** "hi/chatgpt-explained" becomes "chatgpt-explained". */
+/** "hi/chatgpt-explained" gives the article's own language "hi" and the name "chatgpt-explained". */
+const langOf = (id: string) => id.split('/')[0] as Lang;
 const nameOf = (id: string) => id.split('/')[1];
 
 // Topic strip and sidebar list share this data: icon, background colour, text keys.
@@ -101,20 +96,19 @@ const categories = [
 
       <section class="box" id="articles">
         <div class="head"><h2><span class="doc"></span><T k="articles.title" /></h2></div>
-        <div class="cards art">
-          {articleGroups.flatMap(({ code, items }) =>
-            items.map((article) => (
-              <a class="card" data-lang={code} href={localizedPath(`/articles/${nameOf(article.id)}/`, code)}>
+        {articles.length === 0 ? (
+          <p class="meta"><T k="articles.empty" /></p>
+        ) : (
+          <div class="cards art">
+            {articles.map((article) => (
+              <a class="card" href={localizedPath(`/articles/${nameOf(article.id)}/`, langOf(article.id))}>
                 <div class="th" style="--g:linear-gradient(135deg,#5B2BD6,#FF5CA8)">📝</div>
                 <h3>{article.data.title}</h3>
                 <div class="meta">{article.data.description}</div>
               </a>
-            )),
-          )}
-        </div>
-        {articleGroups
-          .filter((group) => group.items.length === 0)
-          .map((group) => <p class="meta" data-lang={group.code}>{ui[group.code]['articles.empty']}</p>)}
+            ))}
+          </div>
+        )}
       </section>
 
       <section class="box" id="about">

@@ -16,7 +16,7 @@ const { Content } = await render(entry);
 const lang = getLangFromUrl(Astro.url);
 const t = useTranslations(lang);
 ---
-<BaseLayout title={`${entry.data.title} - TechSetu`} description={entry.data.description}>
+<BaseLayout title={`${entry.data.title} - TechSetu`} description={entry.data.description} showLanguage={false}>
   <article class="article">
     <h1>{entry.data.title}</h1>
     <p class="meta">{entry.data.date.toLocaleDateString(lang)}</p>

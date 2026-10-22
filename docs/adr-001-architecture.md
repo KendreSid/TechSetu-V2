@@ -23,6 +23,10 @@ Status: proposed. Date: 18 Oct 2026. Based on: Requirements v1.0.
    Cost: the home page HTML also contains the article cards of the other languages (hidden by a style rule),
    and article pages still open the other address normally.
 
+7. **Articles do not depend on the interface language.** Each article is written and published in one
+   language (its folder: `hi/`, `mr/`, `en/`) and is listed for every visitor. The language buttons change
+   only the interface text, and article pages show no language buttons (only Subscribe).
+
 ## What changed from design v1, and why
 
 | Was | Now | Reason |
@@ -49,5 +53,3 @@ Status: proposed. Date: 18 Oct 2026. Based on: Requirements v1.0.
 - This project has not been built or run by the author yet (no internet where it was written).
   First `npm install` and `npm run build` may show small errors to fix.
 - Newsletter signup is not built yet.
-- Language switch on an article page links to the same path in another language,
-  which only works when that translation exists.

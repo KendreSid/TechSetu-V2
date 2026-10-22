@@ -16,11 +16,13 @@ interface Props {
   description?: string;
   /** true = language buttons switch the text in place instead of opening another address */
   inplace?: boolean;
+  /** false = no language buttons and no language alternates (article pages: an article stays in its own language) */
+  showLanguage?: boolean;
 }
 
 const lang = getLangFromUrl(Astro.url);
 const t = useTranslations(lang);
-const { title = `TechSetu - ${t('site.tagline')}`, description = t('meta.description'), inplace = false } = Astro.props;
+const { title = `TechSetu - ${t('site.tagline')}`, description = t('meta.description'), inplace = false, showLanguage = true } = Astro.props;
 const home = localizedPath('/', lang);
 
 // The same page in every language. Search engines use these to show the right
@@ -44,7 +46,7 @@ const alternates = (Object.keys(languages) as Lang[]).map((code) => ({
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <link rel="icon" type="image/png" href="/images/favicon.png" />
-    {alternates.map((alt) => <link rel="alternate" hreflang={alt.code} href={alt.href} />)}
+    {showLanguage && alternates.map((alt) => <link rel="alternate" hreflang={alt.code} href={alt.href} />)}
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Hind:wght@400;500;600&display=swap" rel="stylesheet" />
@@ -64,6 +66,7 @@ const alternates = (Object.keys(languages) as Lang[]).map((code) => ({
           <a href={`${home}#about`} data-localize="/#about"><T k="nav.about" /></a>
         </nav>
         <div class="rt">
+          {showLanguage && (
           <div class="lang" translate="no" role="group" aria-label="Language">
             {alternates.map((alt) => (
               <a href={localizedPath(basePath, alt.code)} hreflang={alt.code} data-lang-link={alt.code} aria-current={alt.code === lang ? 'page' : undefined}>
@@ -71,6 +74,7 @@ const alternates = (Object.keys(languages) as Lang[]).map((code) => ({
               </a>
             ))}
           </div>
+          )}
           <a class="btn dark" href={config.channelUrl} target="_blank" rel="noopener" aria-label={t('cta.subscribe')}>
             <span class="play"></span><span class="bt"><T k="cta.subscribe" /></span>
           </a>

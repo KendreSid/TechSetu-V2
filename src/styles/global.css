@@ -196,8 +196,6 @@ nav a{padding:8px 14px}
 @media(max-width:560px){.mini{right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));width:min(300px,calc(100vw - 24px))}}
 
 /* ---- language: only content of the current language is visible (used by the article cards) ---- */
-[data-lang]{display:none}
-html[lang="hi"] [data-lang="hi"],html[lang="mr"] [data-lang="mr"],html[lang="en"] [data-lang="en"]{display:block}
 
 /* ---- article text spacing ---- */
 .article .prose h2{font-size:clamp(22px,3.6vw,28px);margin:1.8em 0 .5em}
